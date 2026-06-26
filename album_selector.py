@@ -6,6 +6,8 @@ Scores photos using technical quality (sharpness + exposure), aesthetic quality
 then selects the top-N images and copies them to an output folder.
 """
 
+from __future__ import annotations
+
 import csv
 import logging
 import shutil
@@ -204,6 +206,38 @@ def load_image(path: Path) -> tuple[Image.Image | None, np.ndarray | None]:
 
 
 # ---------------------------------------------------------------------------
+# Export & Copy helpers
+# ---------------------------------------------------------------------------
+
+
+def export_scores_csv(scored_images: list[ScoredImage], csv_path: Path) -> None:
+    """Write scored images to a CSV file with formatted values."""
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Path", "TotalScore", "Technical", "Aesthetic", "Emotion"])
+        for s in scored_images:
+            writer.writerow(
+                [
+                    s.path,
+                    f"{s.total:.4f}",
+                    f"{s.technical:.4f}",
+                    f"{s.aesthetic:.4f}",
+                    f"{s.emotion:.4f}",
+                ]
+            )
+    logger.info("Preview CSV saved to %s", csv_path)
+
+
+def copy_top_images(images: list[ScoredImage], output_path: Path) -> None:
+    """Copy the selected images to *output_path* with zero-padded index prefixes."""
+    width = len(str(len(images))) if images else 1
+    for idx, scored in enumerate(tqdm(images, desc="Copying"), start=1):
+        dest = output_path / f"{idx:0{width}d}_{scored.path.name}"
+        shutil.copy2(scored.path, dest)
+    logger.info("Copied %d images to %s", len(images), output_path)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -315,33 +349,11 @@ def main() -> None:
 
     # --- Optional CSV export ------------------------------------------------
     if args.preview_csv:
-        with open(args.preview_csv, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(
-                ["Path", "TotalScore", "Technical", "Aesthetic", "Emotion"]
-            )
-            for s in scored_images:
-                writer.writerow(
-                    [
-                        s.path,
-                        f"{s.total:.4f}",
-                        f"{s.technical:.4f}",
-                        f"{s.aesthetic:.4f}",
-                        f"{s.emotion:.4f}",
-                    ]
-                )
-        logger.info("Preview CSV saved to %s", args.preview_csv)
+        export_scores_csv(scored_images, Path(args.preview_csv))
 
     # --- Copy top images ----------------------------------------------------
     if not args.dryrun:
-        top_images = scored_images[: args.target]
-        width = len(str(len(top_images)))
-        for idx, scored in enumerate(
-            tqdm(top_images, desc="Copying"), start=1
-        ):
-            dest = output_path / f"{idx:0{width}d}_{scored.path.name}"
-            shutil.copy2(scored.path, dest)
-        logger.info("Copied %d images to %s", len(top_images), output_path)
+        copy_top_images(scored_images[: args.target], output_path)
     else:
         logger.info("Dry run complete. No files were copied.")
 
