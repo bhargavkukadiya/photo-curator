@@ -1,0 +1,13 @@
+# Core dependencies
+opencv-python>=4.8.0
+numpy>=1.24.0
+torch>=2.0.0
+Pillow>=10.0.0
+tqdm>=4.65.0
+sentence-transformers>=2.2.0
+
+# Optional: Emotion scoring (GPL-3.0 licensed)
+# deepface>=0.0.80
+
+# Optional: HEIC image support
+# pillow-heif>=0.13.0
