@@ -14,7 +14,7 @@ It scores every image using three signals and selects the top-N:
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/album-selector.git
+git clone https://github.com/bhargavkukadiya/album-selector.git
 cd album-selector
 
 # Install dependencies
