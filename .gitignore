@@ -27,3 +27,4 @@ Thumbs.db
 
 # Output / generated
 *.csv
+!sample_scores.csv

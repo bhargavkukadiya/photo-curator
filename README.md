@@ -6,7 +6,7 @@ It scores every image using three signals and selects the top-N:
 
 | Signal | Model | Weight | What it measures |
 |---|---|---|---|
-| **Technical quality** | OpenCV Laplacian + brightness | 40% | Sharpness and proper exposure |
+| **Technical quality** | OpenCV (Laplacian + brightness) | 40% | Sharpness and proper exposure |
 | **Aesthetic quality** | CLIP (ViT-B/32) | 40% | How "beautiful" the photo looks |
 | **Emotion** *(optional)* | DeepFace | 20% | Happiness / smiles detected |
 
@@ -14,8 +14,8 @@ It scores every image using three signals and selects the top-N:
 
 ```bash
 # Clone the repo
-git clone https://github.com/bhargavkukadiya/album-selector.git
-cd album-selector
+git clone https://github.com/bhargavkukadiya/Album-selector.git
+cd Album-selector
 
 # Install dependencies
 pip install -r requirements.txt
@@ -40,17 +40,16 @@ python album_selector.py --input ./my_photos --output ./selected --target 50
 
 ### All options
 
-```bash
-python album_selector.py \
-  --input ./my_photos \          # Input folder (scanned recursively)
-  --output ./selected \          # Output folder for selected photos
-  --target 200 \                 # Number of photos to select (default: 200)
-  --device cuda \                # Torch device: cpu, cuda, or mps (default: cpu)
-  --preview_csv scores.csv \     # Save all scores to CSV before copying
-  --ref_text "a stunning photo"\ # Custom CLIP reference text
-  --no_deepface \                # Disable emotion scoring
-  --dryrun                       # Score only, don't copy files
-```
+| Flag | Description | Default |
+|---|---|---|
+| `--input` | Input folder with photos (scanned recursively) | *required* |
+| `--output` | Output folder for selected photos | *required* |
+| `--target` | Number of photos to select | `200` |
+| `--device` | Torch device: `cpu`, `cuda`, or `mps` | `cpu` |
+| `--preview_csv` | Save all scores to a CSV before copying | — |
+| `--ref_text` | Reference text for CLIP aesthetic scoring | `"a beautiful photograph"` |
+| `--no_deepface` | Disable DeepFace emotion scoring | `false` |
+| `--dryrun` | Score only, don't copy files | `false` |
 
 ### Dry run with CSV preview
 
@@ -65,14 +64,18 @@ python album_selector.py \
   --dryrun
 ```
 
-Then inspect `scores.csv` to review the rankings before committing:
+Then inspect `scores.csv` to review the rankings before committing. Here's real output from the included sample photos:
 
-```
-Path,TotalScore,Technical,Aesthetic,Emotion
-/photos/sunset.jpg,0.7823,0.6500,0.9200,0.8100
-/photos/group.jpg,0.7150,0.5800,0.8000,0.8500
-...
-```
+| Photo | Total Score | Technical | Aesthetic | Emotion |
+|---|---|---|---|---|
+| city_night.jpg | **0.5510** | 0.9887 | 0.3889 | 0.0000 |
+| beach_sunset.jpg | **0.5462** | 0.9918 | 0.3737 | 0.0000 |
+| ocean.jpg | **0.5261** | 0.9802 | 0.3351 | 0.0000 |
+| mountain.jpg | **0.5227** | 0.9680 | 0.3387 | 0.0000 |
+| blurry_abstract.jpg | **0.3508** | 0.4670 | 0.4102 | 0.0000 |
+
+> [!TIP]
+> Run with `--no_deepface` if you don't need emotion scoring — it's significantly faster.
 
 ### GPU acceleration
 
@@ -91,20 +94,29 @@ python album_selector.py --input ./photos --output ./album --device mps
 | JPEG (`.jpg`, `.jpeg`) | ✅ Built-in |
 | PNG (`.png`) | ✅ Built-in |
 | WebP (`.webp`) | ✅ Built-in |
-| HEIC (`.heic`) | ✅ Requires `pip install pillow-heif` |
+| HEIC (`.heic`) | ⚙️ Requires `pip install pillow-heif` |
 
 ## How Scoring Works
 
 1. **Technical score** — Combines Laplacian variance (sharpness) and mean brightness deviation (exposure), both normalized to `[0, 1]`.
 2. **Aesthetic score** — CLIP cosine similarity between the image and the reference text `"a beautiful photograph"` (configurable via `--ref_text`), rescaled from CLIP's typical `[0.1, 0.4]` range to `[0, 1]`.
-3. **Emotion score** — DeepFace happiness detection, already in `[0, 1]`. Disabled by default if DeepFace is not installed.
+3. **Emotion score** — DeepFace happiness detection, already in `[0, 1]`. Returns `0.0` if DeepFace is not installed or `--no_deepface` is passed.
 
 Final score = `0.4 × technical + 0.4 × aesthetic + 0.2 × emotion`
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.9+
 - See [requirements.txt](requirements.txt) for dependencies
+
+## Testing
+
+```bash
+pip install pytest
+python -m pytest test_album_selector.py -v
+```
+
+All 36 tests run with mocked ML models — no GPU or model downloads needed.
 
 ## License
 
