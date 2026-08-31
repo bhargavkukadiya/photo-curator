@@ -1,128 +1,184 @@
-# 📸 Album Selector
+# 📸 Photo Curator
 
-AI-powered photo selector that automatically picks the best photos from a large collection for your album.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-80%2B%20passed-brightgreen.svg)](test_album_selector.py)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)]()
 
-It scores every image using three signals and selects the top-N:
+> **AI-powered photo selector that automatically curates and ranks the best photos from large collections for your albums.**
 
-| Signal | Model | Weight | What it measures |
-|---|---|---|---|
-| **Technical quality** | OpenCV (Laplacian + brightness) | 40% | Sharpness and proper exposure |
-| **Aesthetic quality** | CLIP (ViT-B/32) | 40% | How "beautiful" the photo looks |
-| **Emotion** *(optional)* | DeepFace | 20% | Happiness / smiles detected |
+---
 
-## Installation
+## ✨ Features
+
+- 🎯 **Multi-Signal AI Scoring**:
+  - **Technical Quality (40%)**: Standardized Laplacian variance for sharpness + balanced exposure.
+  - **Aesthetic Quality (40%)**: Batched CLIP (ViT-B/32) neural aesthetics scoring against configurable reference prompts.
+  - **Emotion Detection (20%, optional)**: DeepFace facial expression and happiness detection.
+- ⚡ **Near-Duplicate Suppression**: Automatically skips redundant burst shots based on embedding cosine similarity (`--dedup_threshold`).
+- 🛡️ **Safe & Transactional File Operations**:
+  - Staging and two-phase atomic commit with automatic rollback on errors.
+  - Non-destructive manifest tracking (`.curator_manifest.json`) and untracked-file protection.
+  - Supports all major filesystems (APFS, ext4, NTFS, FAT32, exFAT, SMB network shares) with metadata preservation (`copystat`).
+- 🚀 **Hardware Accelerated**: Native support for Apple Silicon (`mps`), NVIDIA GPUs (`cuda`), and multi-core `cpu`.
+- 📊 **Dry-Run & CSV Previews**: Preview, inspect, and export rankings to CSV before moving or copying files.
+- 🧪 **Fast In-Memory Test Suite**: 80+ unit tests with zero model-download overhead.
+
+---
+
+## 📦 Installation
 
 ```bash
-# Clone the repo
-git clone https://github.com/bhargavkukadiya/Album-selector.git
-cd Album-selector
+# 1. Clone the repository
+git clone https://github.com/bhargavkukadiya/photo-curator.git
+cd photo-curator
 
-# Install dependencies
+# 2. Install core dependencies
 pip install -r requirements.txt
 
-# Optional: Install DeepFace for emotion scoring
+# 3. Optional: Install DeepFace for facial emotion scoring
 pip install deepface
 
-# Optional: Install HEIC support
+# 4. Optional: Install HEIC/HEIF image format support
 pip install pillow-heif
 ```
 
 > [!NOTE]
-> On first run, the CLIP model (`clip-ViT-B-32`, ~350 MB) will be downloaded automatically and cached locally.
+> On the first run, the CLIP model (`clip-ViT-B-32`, ~350 MB) downloads automatically and caches locally.
 
-## Usage
+---
 
-### Basic usage
+## 🚀 Quick Start
+
+### Basic Usage
+
+Select the top 50 photos from a folder and copy them with index prefixes:
 
 ```bash
 python album_selector.py --input ./my_photos --output ./selected --target 50
 ```
 
-### All options
+### Dry Run with CSV Preview & Burst Deduplication
+
+Score all photos, filter out burst duplicates with similarity $\ge 0.90$, and export the results to CSV without copying:
+
+```bash
+python album_selector.py \
+  --input ./sample_photos \
+  --output ./album \
+  --target 5 \
+  --dedup_threshold 0.90 \
+  --preview_csv scores.csv \
+  --dryrun
+```
+
+Sample output rankings on included sample photos (with `--no_deepface`):
+
+| Photo | Total Score | Technical | Aesthetic | Emotion |
+|---|---|---|---|---|
+| `city_night.jpg` | **0.6832** | 0.9774 | 0.3889 | 0.0000 |
+| `beach_sunset.jpg` | **0.6787** | 0.9836 | 0.3737 | 0.0000 |
+| `ocean.jpg` | **0.6478** | 0.9604 | 0.3351 | 0.0000 |
+| `mountain.jpg` | **0.6374** | 0.9360 | 0.3387 | 0.0000 |
+| `flower.jpg` | **0.6303** | 0.8938 | 0.3668 | 0.0000 |
+
+---
+
+## ⚙️ Advanced Options
+
+### Custom Scoring Weights
+
+Tailor curation for landscapes (e.g. 50% technical, 50% aesthetic, no emotion):
+
+```bash
+python album_selector.py \
+  --input ./nature_trip \
+  --output ./album \
+  --no_deepface \
+  --weight_technical 0.5 \
+  --weight_aesthetic 0.5
+```
+
+> [!TIP]
+> When `--no_deepface` is passed or emotion scoring is unavailable, weights automatically rebalance dynamically so total scores always use the full `[0.0, 1.0]` range.
+
+### Hardware Acceleration
+
+```bash
+# Apple Silicon (M1/M2/M3/M4)
+python album_selector.py --input ./photos --output ./album --device mps --batch_size 32
+
+# NVIDIA CUDA
+python album_selector.py --input ./photos --output ./album --device cuda --batch_size 64
+```
+
+---
+
+## 🛠️ CLI Reference
 
 | Flag | Description | Default |
 |---|---|---|
 | `--input` | Input folder with photos (scanned recursively) | *required* |
 | `--output` | Output folder for selected photos | *required* |
 | `--target` | Number of photos to select | `200` |
+| `--batch_size` | Batch size for CLIP inference | `32` |
 | `--device` | Torch device: `cpu`, `cuda`, or `mps` | `cpu` |
-| `--preview_csv` | Save all scores to a CSV before copying | — |
-| `--ref_text` | Reference text for CLIP aesthetic scoring | `"a beautiful photograph"` |
-| `--no_deepface` | Disable DeepFace emotion scoring | `false` |
-| `--dryrun` | Score only, don't copy files | `false` |
+| `--preview_csv` | Save all computed scores to a CSV before copying | `None` |
+| `--ref_text` | Reference text prompt for aesthetic scoring | `"a beautiful photograph"` |
+| `--no_deepface` | Disable DeepFace facial emotion scoring | `false` |
+| `--weight_technical` | Weight for technical quality (sharpness + exposure) | `0.4` |
+| `--weight_aesthetic` | Weight for aesthetic quality | `0.4` |
+| `--weight_emotion` | Weight for emotion score | `0.2` |
+| `--dedup_threshold` | Cosine similarity threshold `[0.0-1.0]` to suppress near-duplicates (e.g. `0.90`) | *disabled* |
+| `--overwrite` | Allow overwriting non-empty output directory or preview CSV | `false` |
+| `--dryrun` | Score and rank only; do not copy files | `false` |
 
-### Dry run with CSV preview
+---
 
-Score all images and export results without copying anything:
-
-```bash
-python album_selector.py \
-  --input ./vacation_photos \
-  --output ./album \
-  --target 100 \
-  --preview_csv scores.csv \
-  --dryrun
-```
-
-Then inspect `scores.csv` to review the rankings before committing. Here's real output from the included sample photos:
-
-| Photo | Total Score | Technical | Aesthetic | Emotion |
-|---|---|---|---|---|
-| city_night.jpg | **0.5510** | 0.9887 | 0.3889 | 0.0000 |
-| beach_sunset.jpg | **0.5462** | 0.9918 | 0.3737 | 0.0000 |
-| ocean.jpg | **0.5261** | 0.9802 | 0.3351 | 0.0000 |
-| mountain.jpg | **0.5227** | 0.9680 | 0.3387 | 0.0000 |
-| blurry_abstract.jpg | **0.3508** | 0.4670 | 0.4102 | 0.0000 |
-
-> [!TIP]
-> Run with `--no_deepface` if you don't need emotion scoring — it's significantly faster.
-
-### GPU acceleration
-
-```bash
-# NVIDIA GPU
-python album_selector.py --input ./photos --output ./album --device cuda
-
-# Apple Silicon
-python album_selector.py --input ./photos --output ./album --device mps
-```
-
-## Supported Formats
+## 🖼️ Supported Formats
 
 | Format | Support |
 |---|---|
-| JPEG (`.jpg`, `.jpeg`) | ✅ Built-in |
+| JPEG (`.jpg`, `.jpeg`) | ✅ Built-in (auto EXIF orientation correction) |
 | PNG (`.png`) | ✅ Built-in |
 | WebP (`.webp`) | ✅ Built-in |
-| HEIC (`.heic`) | ⚙️ Requires `pip install pillow-heif` |
+| BMP (`.bmp`) | ✅ Built-in |
+| TIFF (`.tiff`, `.tif`) | ✅ Built-in |
+| HEIC / HEIF (`.heic`, `.heif`) | ⚙️ Requires `pip install pillow-heif` |
 
-## How Scoring Works
+---
 
-1. **Technical score** — Combines Laplacian variance (sharpness) and mean brightness deviation (exposure), both normalized to `[0, 1]`.
-2. **Aesthetic score** — CLIP cosine similarity between the image and the reference text `"a beautiful photograph"` (configurable via `--ref_text`), rescaled from CLIP's typical `[0.1, 0.4]` range to `[0, 1]`.
-3. **Emotion score** — DeepFace happiness detection, already in `[0, 1]`. Returns `0.0` if DeepFace is not installed or `--no_deepface` is passed.
+## 🧪 Testing
 
-Final score = `0.4 × technical + 0.4 × aesthetic + 0.2 × emotion`
-
-## Requirements
-
-- Python 3.9+
-- See [requirements.txt](requirements.txt) for dependencies
-
-## Testing
+Run the test suite:
 
 ```bash
 pip install pytest
 python -m pytest test_album_selector.py -v
 ```
 
-All 36 tests run with mocked ML models — no GPU or model downloads needed.
+All 80+ unit tests run in-memory with mocked ML models — fast execution with no GPU or model downloads required.
 
-## License
+---
 
-[MIT](LICENSE)
+## 🤝 Contributing
 
-## Acknowledgements
+Contributions are welcome!
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Run test suite (`pytest test_album_selector.py`)
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+## 🙏 Acknowledgements
 
 - [CLIP](https://github.com/openai/CLIP) by OpenAI
 - [sentence-transformers](https://www.sbert.net/) by UKP Lab
