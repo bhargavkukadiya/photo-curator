@@ -1,39 +1,66 @@
-# Python
+# Python & Bytecode
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+
+# Packaging & Distribution
 *.egg-info/
 .eggs/
 dist/
 build/
 *.egg
+*.whl
 
-# Testing and linting caches
+# Testing & Linting
 .pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.tox/
 
-# Virtual environments
+# Virtual Environments
 venv/
 .venv/
 env/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# IDEs & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# OS
+# Operating Systems
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 
-# Model caches (large, should not be committed)
+# Machine Learning & Model Caches
 .cache/
+.deepface/
 
-# Output / generated
+# Curator Ephemeral & Output Folders
+.curator_stage_*/
+.curator_backup_*/
+.curator_manifest.tmp
+output/
+out/
+sample_out/
+
+# CSV Outputs (preserve sample benchmark data)
 *.csv
 !sample_scores.csv
