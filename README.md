@@ -52,34 +52,50 @@
 
 ```mermaid
 flowchart TD
-    A[Raw Photo Collection] --> B[Recursive File Discovery & Validation]
-    B --> C[Memory-Safe Ingestion\nMax 1024px Thumbnailing]
-    
-    subgraph ScoringEngine [Multi-Signal AI Scoring]
-        C --> D1[Technical Quality\nLaplacian Sharpness + Exposure]
-        C --> D2[Aesthetic Quality\nBatched CLIP ViT-B/32]
-        C --> D3[Emotion Score\nOptional DeepFace Happiness]
-        D1 & D2 & D3 --> E[Dynamic Weight Rebalancer\nNormalized to 0.0 - 1.0]
-    end
-    
-    E --> F[Score Ranking Descending]
-    
-    subgraph DedupEngine [Vectorized Selection]
-        F --> G[Vectorized Cosine Similarity Matrix\nBatch Tensor MatMul]
-        G --> H{Similarity >= Threshold?}
-        H -- Yes --> I[Duplicate Suppressed]
-        H -- No --> J[Candidate Selected]
-    end
-    
-    subgraph TransactionCommit [Two-Phase Transactional Storage]
-        J --> K[Stage Files in .curator_stage_]
-        K --> L[Validate & Backup Existing Manifest]
-        L --> M[Atomic Link or O_CREAT Exclusive Copy]
-        M --> N[Atomic Manifest Replace]
-        M -- Failure --> O[Automatic Rollback & Recovery]
-    end
-    
-    N --> P[Curated Output Album & Manifest]
+    %% Ingestion Stage
+    RAW["📸 Raw Photo Collection<br/>JPG, PNG, WebP, HEIC"] --> DISCOVERY["Recursive Discovery<br/>Path Traversal & Validation"]
+    DISCOVERY --> RESIZE["Memory-Safe Ingestion<br/>1024px Max-Edge Downscale"]
+
+    %% Scoring Stage
+    RESIZE --> TECH["Technical Quality<br/>Laplacian Sharpness & Exposure"]
+    RESIZE --> AES["Aesthetic Quality<br/>Batched CLIP ViT-B/32"]
+    RESIZE --> EMO["Facial Emotion<br/>Optional DeepFace Happiness"]
+
+    TECH --> FUSION["Dynamic Score Fusion<br/>Normalized Weights (0.0 - 1.0)"]
+    AES --> FUSION
+    EMO --> FUSION
+
+    %% Selection Stage
+    FUSION --> RANK["Score Ranking<br/>Sorted Descending by Total"]
+    RANK --> DEDUP["Vectorized Cosine Matrix<br/>PyTorch Batch MatMul (37x faster)"]
+    DEDUP --> CHECK{"Cosine Similarity<br/>&ge; Threshold?"}
+
+    CHECK -- "Yes (Near-Duplicate)" --> SUPPRESS["Duplicate Suppressed<br/>Flagged in CSV Preview"]
+    CHECK -- "No (Distinct Photo)" --> SELECT["Candidate Selected<br/>Top Ranked within Target"]
+
+    %% Storage Stage
+    SELECT --> STAGE["Two-Phase Staging<br/>Isolate in .curator_stage_*/"]
+    STAGE --> BACKUP["Manifest Snapshot<br/>Backup .curator_manifest.json"]
+    BACKUP --> COMMIT["Atomic Link / Stream Copy<br/>os.link with O_CREAT fallback"]
+
+    COMMIT --> MANIFEST["Atomic Manifest Commit<br/>Swap Updated Manifest"]
+    COMMIT -. "On Error" .-> ROLLBACK["Automatic Rollback<br/>Purge Staging & Restore Backups"]
+
+    MANIFEST --> OUT["🎉 Curated Output Album<br/>Selected Photos & preview.csv"]
+
+    %% Modern Theme Styling
+    classDef default fill:#161b22,stroke:#30363d,stroke-width:1.5px,color:#e6edf3;
+    classDef source fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef scoring fill:#241d3d,stroke:#a78bfa,stroke-width:1.5px,color:#f5f3ff;
+    classDef decision fill:#312006,stroke:#fbbf24,stroke-width:2px,color:#fffbeb;
+    classDef success fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ecfdf5;
+    classDef failure fill:#450a0a,stroke:#f87171,stroke-width:1.5px,color:#fef2f2;
+
+    class RAW source;
+    class TECH,AES,EMO,FUSION scoring;
+    class CHECK decision;
+    class SELECT,MANIFEST,OUT success;
+    class SUPPRESS,ROLLBACK failure;
 ```
 
 ---
