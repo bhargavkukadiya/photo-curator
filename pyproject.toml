@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photo-curator"
+version = "1.1.0"
+description = "AI-powered photo selector that curates, ranks, and deduplicates large photo collections for albums."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Bhargav Kukadiya" }
+]
+keywords = [
+    "photo-curator",
+    "photo-selection",
+    "computer-vision",
+    "clip",
+    "image-quality",
+    "album-curator",
+    "deduplication",
+    "aesthetic-scoring",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "torch>=2.0.0",
+    "Pillow>=10.0.0",
+    "tqdm>=4.65.0",
+    "sentence-transformers>=2.2.0",
+]
+
+[project.optional-dependencies]
+emotion = [
+    "deepface>=0.0.80",
+]
+heic = [
+    "pillow-heif>=0.13.0",
+]
+all = [
+    "deepface>=0.0.80",
+    "pillow-heif>=0.13.0",
+]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+photo-curator = "photo_curator.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/bhargavkukadiya/photo-curator"
+Repository = "https://github.com/bhargavkukadiya/photo-curator.git"
+Issues = "https://github.com/bhargavkukadiya/photo-curator/issues"
+Changelog = "https://github.com/bhargavkukadiya/photo-curator/blob/main/CHANGELOG.md"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers"
+filterwarnings = [
+    "ignore::urllib3.exceptions.NotOpenSSLWarning",
+]
+
+[tool.setuptools.package-dir]
+photo_curator = "src/photo_curator"
+
+[tool.setuptools]
+py-modules = ["album_selector"]
+packages = ["photo_curator"]
